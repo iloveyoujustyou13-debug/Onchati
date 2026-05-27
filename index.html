@@ -1,0 +1,294 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no">
+    <title>Private Video Chat | WhatsApp Style</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:opsz,wght@14..32,300;400;600;700;800&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css">
+    <style>
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+        body { font-family: 'Inter', sans-serif; background: #0a0a0a; height: 100vh; overflow: hidden; color: white; }
+        .gradient-bg { position: fixed; width: 100%; height: 100%; background: radial-gradient(circle at 50% 50%, #1a1a2e, #0a0a0a); z-index: -1; }
+        .app { height: 100vh; display: flex; flex-direction: column; }
+        
+        /* Header */
+        .header { padding: 15px 30px; background: rgba(0,0,0,0.6); backdrop-filter: blur(20px); display: flex; justify-content: space-between; align-items: center; border-bottom: 1px solid rgba(255,255,255,0.1); flex-wrap: wrap; gap: 15px; }
+        .logo { font-size: 24px; font-weight: 800; background: linear-gradient(135deg, #667eea, #764ba2); -webkit-background-clip: text; background-clip: text; color: transparent; }
+        .stats { display: flex; gap: 15px; }
+        .stat-item { background: rgba(255,255,255,0.1); padding: 6px 12px; border-radius: 20px; font-size: 13px; }
+        
+        /* Room Section */
+        .room-section { flex: 1; display: flex; justify-content: center; align-items: center; gap: 50px; flex-wrap: wrap; padding: 20px; }
+        .room-card { background: rgba(255,255,255,0.05); backdrop-filter: blur(20px); padding: 40px; border-radius: 32px; text-align: center; min-width: 280px; border: 1px solid rgba(255,255,255,0.1); transition: 0.3s; }
+        .room-card:hover { transform: translateY(-5px); border-color: #667eea; }
+        .room-card h2 { margin: 15px 0 10px; font-size: 24px; }
+        .room-card p { color: rgba(255,255,255,0.6); margin-bottom: 25px; }
+        .or-divider { font-size: 20px; font-weight: bold; color: rgba(255,255,255,0.4); }
+        .input-group { display: flex; gap: 10px; }
+        .input-group input { background: rgba(255,255,255,0.1); border: 1px solid rgba(255,255,255,0.2); padding: 12px 20px; border-radius: 40px; color: white; font-size: 18px; text-align: center; letter-spacing: 3px; font-family: monospace; width: 200px; }
+        .input-group input:focus { outline: none; border-color: #667eea; }
+        
+        /* WhatsApp Style Video Layout */
+        .video-section { flex: 1; position: relative; background: #000; overflow: hidden; }
+        
+        /* Remote Video - Full Screen (Partner's Video) */
+        .remote-video-container { position: absolute; top: 0; left: 0; width: 100%; height: 100%; background: #000; }
+        #remoteVideo { width: 100%; height: 100%; object-fit: cover; }
+        
+        /* Local Video - PIP in Top Right Corner (Your Video) */
+        .local-video-pip { position: absolute; top: 20px; right: 20px; width: 120px; height: 160px; border-radius: 16px; overflow: hidden; border: 2px solid rgba(255,255,255,0.3); box-shadow: 0 4px 12px rgba(0,0,0,0.3); cursor: pointer; transition: 0.2s; z-index: 10; background: #1a1a1a; }
+        .local-video-pip:hover { transform: scale(1.02); border-color: #667eea; }
+        #localVideo { width: 100%; height: 100%; object-fit: cover; }
+        
+        /* Video Overlay for Remote (Bottom) */
+        .video-overlay-remote { position: absolute; bottom: 0; left: 0; right: 0; padding: 15px; background: linear-gradient(to top, rgba(0,0,0,0.7), transparent); display: flex; justify-content: space-between; z-index: 10; }
+        
+        /* Video Overlay for Local (Top of PIP) */
+        .video-overlay-local { position: absolute; bottom: 8px; left: 0; right: 0; padding: 6px; background: linear-gradient(to top, rgba(0,0,0,0.6), transparent); display: flex; justify-content: center; font-size: 10px; }
+        
+        .status-badge { background: rgba(0,0,0,0.6); padding: 4px 12px; border-radius: 20px; font-size: 12px; }
+        .status-badge.connected { color: #4ade80; }
+        
+        /* Control Panel */
+        .control-panel { padding: 20px; background: rgba(0,0,0,0.7); backdrop-filter: blur(20px); display: flex; justify-content: center; gap: 15px; border-top: 1px solid rgba(255,255,255,0.1); flex-wrap: wrap; }
+        .ctrl-btn { width: 55px; height: 55px; border-radius: 50%; border: none; background: rgba(255,255,255,0.15); color: white; font-size: 22px; cursor: pointer; transition: 0.2s; }
+        .ctrl-btn:hover { transform: scale(1.05); background: rgba(255,255,255,0.25); }
+        .ctrl-btn.primary { background: linear-gradient(135deg, #667eea, #764ba2); width: auto; border-radius: 40px; padding: 0 25px; font-size: 16px; gap: 8px; display: inline-flex; align-items: center; }
+        .ctrl-btn.danger { background: linear-gradient(135deg, #f093fb, #f5576c); }
+        
+        /* Modal */
+        .modal { position: fixed; top: 0; left: 0; right: 0; bottom: 0; background: rgba(0,0,0,0.95); backdrop-filter: blur(10px); display: flex; align-items: center; justify-content: center; z-index: 1000; }
+        .modal-content { background: linear-gradient(135deg, #1e1e2e, #2a2a3a); padding: 40px; border-radius: 32px; text-align: center; max-width: 400px; width: 90%; }
+        .big-code { font-size: 32px; font-weight: bold; letter-spacing: 5px; background: rgba(0,0,0,0.5); padding: 20px; border-radius: 16px; margin: 20px 0; font-family: monospace; }
+        .toast { position: fixed; bottom: 100px; left: 50%; transform: translateX(-50%); background: rgba(0,0,0,0.9); padding: 10px 20px; border-radius: 40px; font-size: 14px; border-left: 3px solid #667eea; transition: 0.3s; pointer-events: none; z-index: 1000; white-space: nowrap; }
+        
+        @media (max-width: 768px) { 
+            .room-section { flex-direction: column; gap: 20px; } 
+            .ctrl-btn { width: 48px; height: 48px; font-size: 18px; } 
+            .big-code { font-size: 24px; letter-spacing: 3px; } 
+            .toast { white-space: nowrap; font-size: 12px; bottom: 80px; }
+            .local-video-pip { width: 100px; height: 133px; top: 15px; right: 15px; }
+            .input-group input { width: 160px; font-size: 14px; letter-spacing: 2px; }
+        }
+    </style>
+</head>
+<body>
+    <div class="gradient-bg"></div>
+    
+    <div class="app">
+        <div class="header">
+            <div class="logo"><i class="fas fa-lock"></i> PrivateChat</div>
+            <div class="stats">
+                <div class="stat-item"><i class="fas fa-key"></i> <span id="roomStatus">No Room</span></div>
+                <div class="stat-item"><i class="fas fa-tachometer-alt"></i> <span id="ping">0</span> ms</div>
+            </div>
+        </div>
+        
+        <!-- Room Section -->
+        <div class="room-section" id="roomSection">
+            <div class="room-card">
+                <i class="fas fa-plus-circle" style="font-size: 48px; color: #667eea;"></i>
+                <h2>Create Room</h2>
+                <p>Create a new private room</p>
+                <button class="ctrl-btn primary" id="createRoomBtn"><i class="fas fa-plus"></i> Create Room</button>
+            </div>
+            <div class="or-divider">OR</div>
+            <div class="room-card">
+                <i class="fas fa-sign-in-alt" style="font-size: 48px; color: #667eea;"></i>
+                <h2>Join Room</h2>
+                <p>Enter 8-digit room code</p>
+                <div class="input-group">
+                    <input type="text" id="roomCodeInput" placeholder="XXXXXXXX" maxlength="8" autocomplete="off">
+                    <button class="ctrl-btn primary" id="joinRoomBtn"><i class="fas fa-arrow-right"></i> Join</button>
+                </div>
+            </div>
+        </div>
+        
+        <!-- WhatsApp Style Video Section -->
+        <div class="video-section" id="videoSection" style="display: none;">
+            <!-- Remote Video (Partner) - Full Screen -->
+            <div class="remote-video-container">
+                <video id="remoteVideo" autoplay playsinline></video>
+                <div class="video-overlay-remote">
+                    <span><i class="fas fa-user"></i> <span id="partnerName">Partner</span></span>
+                    <span class="status-badge" id="remoteStatus">Waiting...</span>
+                </div>
+            </div>
+            
+            <!-- Local Video (You) - PIP Top Right -->
+            <div class="local-video-pip" id="localPip">
+                <video id="localVideo" autoplay muted playsinline></video>
+                <div class="video-overlay-local">
+                    <span>You</span>
+                </div>
+            </div>
+        </div>
+        
+        <!-- Control Panel -->
+        <div class="control-panel" id="controlPanel" style="display: none;">
+            <button class="ctrl-btn" id="micBtn"><i class="fas fa-microphone"></i></button>
+            <button class="ctrl-btn" id="videoBtn"><i class="fas fa-video"></i></button>
+            <button class="ctrl-btn" id="shareBtn"><i class="fas fa-desktop"></i></button>
+            <button class="ctrl-btn danger" id="leaveBtn"><i class="fas fa-sign-out-alt"></i></button>
+        </div>
+    </div>
+    
+    <div id="toast" class="toast">Message</div>
+    
+    <div id="codeModal" class="modal" style="display: none;">
+        <div class="modal-content">
+            <i class="fas fa-key" style="font-size: 55px; color: #667eea;"></i>
+            <h2>Your Room Code</h2>
+            <div class="big-code" id="displayCode">--------</div>
+            <p>Share this 8-digit code with your friend</p>
+            <button class="ctrl-btn primary" id="copyCodeBtn"><i class="fas fa-copy"></i> Copy Code</button>
+            <button class="ctrl-btn" id="startChatBtn"><i class="fas fa-video"></i> Start Chat</button>
+        </div>
+    </div>
+
+    <script src="https://cdn.socket.io/4.5.4/socket.io.min.js"></script>
+    <script>
+        // ==================== SIGNALING SERVER ====================
+        const SIGNALING_SERVER = 'https://my-signaling-server-49dv.onrender.com';
+        
+        const ICE_CONFIG = {
+            iceServers: [
+                { urls: 'stun:stun.l.google.com:19302' },
+                { urls: 'stun:stun1.l.google.com:19302' },
+                { urls: 'stun:stun2.l.google.com:19302' },
+                { urls: 'turn:openrelay.metered.ca:80', username: 'openrelayproject', credential: 'openrelayproject' },
+                { urls: 'turn:openrelay.metered.ca:443', username: 'openrelayproject', credential: 'openrelayproject' }
+            ]
+        };
+        
+        const roomSection = document.getElementById('roomSection');
+        const videoSection = document.getElementById('videoSection');
+        const controlPanel = document.getElementById('controlPanel');
+        const createBtn = document.getElementById('createRoomBtn');
+        const joinBtn = document.getElementById('joinRoomBtn');
+        const roomInput = document.getElementById('roomCodeInput');
+        const leaveBtn = document.getElementById('leaveBtn');
+        const micBtn = document.getElementById('micBtn');
+        const videoBtn = document.getElementById('videoBtn');
+        const shareBtn = document.getElementById('shareBtn');
+        const localVideo = document.getElementById('localVideo');
+        const remoteVideo = document.getElementById('remoteVideo');
+        const roomStatus = document.getElementById('roomStatus');
+        const remoteStatus = document.getElementById('remoteStatus');
+        const partnerName = document.getElementById('partnerName');
+        const toast = document.getElementById('toast');
+        const codeModal = document.getElementById('codeModal');
+        const displayCode = document.getElementById('displayCode');
+        const copyBtn = document.getElementById('copyCodeBtn');
+        const startChatBtn = document.getElementById('startChatBtn');
+        const pingSpan = document.getElementById('ping');
+        
+        let localStream = null, peerConnection = null, socket = null, currentRoom = null;
+        let isMuted = false, isVideoOff = false, isScreenSharing = false, originalStream = null, pingInterval = null;
+        
+        function showToast(msg, duration = 3000) {
+            toast.textContent = msg;
+            toast.style.opacity = '1';
+            setTimeout(() => { toast.style.opacity = '0'; }, duration);
+        }
+        
+        function updateRemoteStatus(text, isConnected = false) {
+            remoteStatus.textContent = text;
+            remoteStatus.className = 'status-badge ' + (isConnected ? 'connected' : '');
+            if (isConnected) partnerName.textContent = 'Partner';
+        }
+        
+        async function initCamera() {
+            try {
+                localStream = await navigator.mediaDevices.getUserMedia({ video: true, audio: true });
+                localVideo.srcObject = localStream;
+                originalStream = localStream;
+                showToast('Camera ready!', 2000);
+                return true;
+            } catch (err) { showToast('Camera access denied!', 3000); return false; }
+        }
+        
+        function toggleMic() {
+            if (localStream) {
+                const audio = localStream.getAudioTracks()[0];
+                if (audio) { isMuted = !isMuted; audio.enabled = !isMuted;
+                micBtn.innerHTML = isMuted ? '<i class="fas fa-microphone-slash"></i>' : '<i class="fas fa-microphone"></i>';
+                micBtn.style.background = isMuted ? '#ef4444' : ''; }
+            }
+        }
+        
+        function toggleVideo() {
+            if (localStream) {
+                const video = localStream.getVideoTracks()[0];
+                if (video) { isVideoOff = !isVideoOff; video.enabled = !isVideoOff;
+                videoBtn.innerHTML = isVideoOff ? '<i class="fas fa-video-slash"></i>' : '<i class="fas fa-video"></i>';
+                videoBtn.style.background = isVideoOff ? '#ef4444' : ''; }
+            }
+        }
+        
+        async function toggleScreen() {
+            if (!isScreenSharing) {
+                try {
+                    const screen = await navigator.mediaDevices.getDisplayMedia({ video: true });
+                    const sender = peerConnection?.getSenders().find(s => s.track?.kind === 'video');
+                    if (sender) sender.replaceTrack(screen.getVideoTracks()[0]);
+                    localVideo.srcObject = screen;
+                    screen.getVideoTracks()[0].onended = () => toggleScreen();
+                    isScreenSharing = true; shareBtn.style.background = '#4ade80'; showToast('Screen sharing', 2000);
+                } catch (e) { showToast('Screen share cancelled', 2000); }
+            } else {
+                if (originalStream) {
+                    const sender = peerConnection?.getSenders().find(s => s.track?.kind === 'video');
+                    if (sender) sender.replaceTrack(originalStream.getVideoTracks()[0]);
+                    localVideo.srcObject = originalStream;
+                    isScreenSharing = false; shareBtn.style.background = ''; showToast('Screen stopped', 2000);
+                }
+            }
+        }
+        
+        async function createPeerConnection(roomId) {
+            if (peerConnection) peerConnection.close();
+            peerConnection = new RTCPeerConnection(ICE_CONFIG);
+            if (localStream) localStream.getTracks().forEach(track => { peerConnection.addTrack(track, localStream); });
+            peerConnection.ontrack = (e) => { if (e.streams[0]) { remoteVideo.srcObject = e.streams[0]; updateRemoteStatus('Connected', true); showToast('Connected!', 2000); } };
+            peerConnection.onicecandidate = (e) => { if (e.candidate) socket.emit('signal', { candidate: e.candidate, room: roomId }); };
+            peerConnection.oniceconnectionstatechange = () => { if (peerConnection.iceConnectionState === 'disconnected' || peerConnection.iceConnectionState === 'failed') leaveRoom(); };
+            return peerConnection;
+        }
+        
+        function connectSignaling() {
+            socket = io(SIGNALING_SERVER, { transports: ['websocket'], reconnection: true });
+            socket.on('connect', () => { console.log('Connected'); showToast('Connected to server!', 2000); });
+            socket.on('connect_error', () => { showToast('Cannot connect to server!', 5000); });
+            socket.on('room-created', (code) => { currentRoom = code; roomStatus.textContent = `Room: ${code}`; displayCode.textContent = code; codeModal.style.display = 'flex'; });
+            socket.on('room-joined', async (code) => { currentRoom = code; roomStatus.textContent = `Room: ${code}`; roomSection.style.display = 'none'; videoSection.style.display = 'block'; controlPanel.style.display = 'flex'; const pc = await createPeerConnection(code); const offer = await pc.createOffer(); await pc.setLocalDescription(offer); socket.emit('offer', { offer, room: code }); });
+            socket.on('room-error', (msg) => { showToast(msg, 3000); });
+            socket.on('offer', async (data) => { if (!peerConnection) { const pc = await createPeerConnection(data.room || currentRoom); await pc.setRemoteDescription(new RTCSessionDescription(data.offer)); const answer = await pc.createAnswer(); await pc.setLocalDescription(answer); socket.emit('answer', { answer, room: data.room || currentRoom }); } });
+            socket.on('answer', async (data) => { if (peerConnection) await peerConnection.setRemoteDescription(new RTCSessionDescription(data.answer)); });
+            socket.on('signal', async (data) => { if (peerConnection && data.candidate) await peerConnection.addIceCandidate(new RTCIceCandidate(data.candidate)); });
+            socket.on('partner-left', () => { showToast('Partner left', 2000); leaveRoom(); });
+        }
+        
+        function createRoom() { if (!socket) { showToast('Connecting...', 1000); return; } socket.emit('create-room'); }
+        function joinRoom() { const code = roomInput.value.trim(); if (!code || code.length !== 8) { showToast('Enter 8-digit code', 2000); return; } socket.emit('join-room', code); }
+        function leaveRoom() { if (socket && currentRoom) socket.emit('leave-room', currentRoom); if (peerConnection) peerConnection.close(); peerConnection = null; remoteVideo.srcObject = null; currentRoom = null; roomSection.style.display = 'flex'; videoSection.style.display = 'none'; controlPanel.style.display = 'none'; roomStatus.textContent = 'No Room'; updateRemoteStatus('Waiting...', false); partnerName.textContent = 'Partner'; showToast('Left room', 2000); }
+        function copyCode() { navigator.clipboard.writeText(displayCode.textContent); showToast('Code copied!', 1500); }
+        function startChat() { codeModal.style.display = 'none'; roomSection.style.display = 'none'; videoSection.style.display = 'block'; controlPanel.style.display = 'flex'; }
+        function startPing() { pingInterval = setInterval(() => { const ping = Math.floor(Math.random() * 80) + 20; pingSpan.textContent = ping; pingSpan.style.color = ping > 100 ? '#ef4444' : ping > 60 ? '#fbbf24' : '#4ade80'; }, 3000); }
+        
+        async function init() {
+            const hasCamera = await initCamera();
+            if (hasCamera) { connectSignaling(); startPing(); }
+            createBtn.onclick = createRoom; joinBtn.onclick = joinRoom; leaveBtn.onclick = leaveRoom;
+            micBtn.onclick = toggleMic; videoBtn.onclick = toggleVideo; shareBtn.onclick = toggleScreen;
+            copyBtn.onclick = copyCode; startChatBtn.onclick = startChat;
+            roomInput.onkeypress = (e) => { if (e.key === 'Enter') joinRoom(); };
+        }
+        init();
+        window.onbeforeunload = () => { if (localStream) localStream.getTracks().forEach(t => t.stop()); if (socket) socket.disconnect(); if (peerConnection) peerConnection.close(); };
+    </script>
+</body>
+</html>
